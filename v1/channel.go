@@ -51,16 +51,30 @@ func (t *channelIter[T]) Next() (T, error) {
 	}
 }
 
-func (t *channelIter[T]) Write(res T) error {
+func (t *channelIter[T]) write(res Result[T]) error {
+	// check cancelation first so it is preferred in the event both cancel
+	// channels and the result channel are both ready
 	select {
 	case <-t.done:
 		return ErrClosed
 	case <-t.cxt.Done():
 		return ErrCanceled
 	default:
-		t.res <- Result[T]{Elem: res}
+	}
+	// then try all of write and cancelation channels, the first to become
+	// ready will be used
+	select {
+	case <-t.done:
+		return ErrClosed
+	case <-t.cxt.Done():
+		return ErrCanceled
+	case t.res <- res:
 		return nil
 	}
+}
+
+func (t *channelIter[T]) Write(res T) error {
+	return t.write(Result[T]{Elem: res})
 }
 
 func (t *channelIter[T]) Close() {
@@ -77,15 +91,11 @@ func (t *channelIter[T]) Close() {
 
 func (t *channelIter[T]) Cancel(err error) error {
 	if err != nil {
-		select {
-		case <-t.done:
-			return ErrClosed
-		case <-t.cxt.Done():
-			return ErrCanceled
-		default:
-			t.res <- Result[T]{Error: err}
+		werr := t.write(Result[T]{Error: err})
+		if werr != nil {
+			return werr
 		}
 	}
 	t.Close()
-	return err
+	return nil
 }
