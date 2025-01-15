@@ -46,7 +46,8 @@ func (f VisitorFunc[T]) Visit(v T) error {
 	return f(v)
 }
 
-// Visit applies the provided function to every element in the iterator
+// Visit applies the provided function to every element in the iterator. The
+// iterator is closed before returning if it is not fully consumed.
 func Visit[T any](iter Iterator[T], visitor Visitor[T]) error {
 	for {
 		v, err := iter.Next()
@@ -57,6 +58,7 @@ func Visit[T any](iter Iterator[T], visitor Visitor[T]) error {
 		}
 		err = visitor.Visit(v)
 		if err != nil {
+			iter.Close()
 			return err
 		}
 	}
@@ -66,8 +68,16 @@ func Visit[T any](iter Iterator[T], visitor Visitor[T]) error {
 // Collect processes the entire iterator and appends each element produced to a
 // slice, which is returned.
 func Collect[T any](iter Iterator[T]) ([]T, error) {
+	return CollectN(iter, -1)
+}
+
+// CollectN processes the iterator to the end or [limit] elements, whichever
+// comes first, and appends each element produced to a slice, which is returned.
+// If the limit is <= 0 no limit is imposed. The iterator is closed before
+// returning if it is not fully consumed.
+func CollectN[T any](iter Iterator[T], limit int) ([]T, error) {
 	var res []T
-	for {
+	for i := 0; limit <= 0 || i < limit; i++ {
 		e, err := iter.Next()
 		if IsFinished(err) {
 			break // iterator closed or context canceled; this is not unusual
@@ -76,6 +86,7 @@ func Collect[T any](iter Iterator[T]) ([]T, error) {
 		}
 		res = append(res, e)
 	}
+	iter.Close()
 	return res, nil
 }
 
