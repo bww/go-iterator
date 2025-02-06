@@ -40,10 +40,14 @@ type Visitor[T any] interface {
 	Visit(T) error
 }
 
-type VisitorFunc[T any] func(T) error
+type visitorFunc[T any] func(T) error
 
-func (f VisitorFunc[T]) Visit(v T) error {
+func (f visitorFunc[T]) Visit(v T) error {
 	return f(v)
+}
+
+func VisitorFunc[T any](f func(T) error) Visitor[T] {
+	return VisitorFunc[T](f)
 }
 
 // Visit applies the provided function to every element in the iterator. The
