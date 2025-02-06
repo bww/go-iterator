@@ -47,7 +47,7 @@ func (f visitorFunc[T]) Visit(v T) error {
 }
 
 func VisitorFunc[T any](f func(T) error) Visitor[T] {
-	return VisitorFunc[T](f)
+	return visitorFunc[T](f)
 }
 
 // Visit applies the provided function to every element in the iterator. The

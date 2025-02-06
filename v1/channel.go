@@ -78,6 +78,9 @@ func (t *channelIter[T]) Write(res T) error {
 }
 
 func (t *channelIter[T]) Close() {
+	if t == nil {
+		return
+	}
 	select {
 	case <-t.done:
 		return // already finalized

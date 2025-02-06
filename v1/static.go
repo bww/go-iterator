@@ -39,5 +39,8 @@ func (t *sliceIter[T]) Next() (T, error) {
 }
 
 func (t *sliceIter[T]) Close() {
+	if t == nil {
+		return
+	}
 	atomic.AddInt32(&t.closed, 1)
 }
